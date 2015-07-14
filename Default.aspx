@@ -3,6 +3,7 @@
 <!DOCTYPE html>
 
 <style>
+    #document {display: none;}
     body, html{
     font-family: Helvetica,sans-serif;
     font-size: 14px;
@@ -102,7 +103,7 @@ th {
         }
     $(document).ready(function () {
         // here clone our gridview first
-       
+                    
                     var tab = $("#<%=GridView1.ClientID%>").clone(true);
                     // clone again for freeze
                     var tabFreeze = $("#<%=GridView1.ClientID%>").clone(true);
@@ -135,38 +136,41 @@ th {
                         $('#FCol').scrollTop($(this).scrollTop());
                         $("#h01").html($(this).scrollTop());
                     });
-                    $('#Col').height($(window).height() - 100);
-
-                    $('#FCol').height($(window).height() - 100);
+                    $('#Col').height($(window).height() - 150);
+                    $('#FCol').height($(window).height() - 150);
                     $('#Col').width($(window).width() - 600);
+
+                    $('#TreeView1').height($(window).height() - 100);
+                    $("#document").show();
     });
     
 </script>
 </head>
     <body>
-        <h1 id="h01">Test</h1>
-        <form id="form1" runat="server">
-            <div style ="border:1px solid #000;display:inline-block">
-              <asp:TreeView ID="TreeView1" style="display:inline-block;width:100px" ImageSet="Arrows" runat="server">
-                  <HoverNodeStyle Font-Underline="True" ForeColor="#5555DD" />
-                <Nodes>
-                </Nodes>
-                  <NodeStyle Font-Names="Tahoma" Font-Size="10pt" ForeColor="Black" HorizontalPadding="5px" NodeSpacing="0px" VerticalPadding="0px" />
-                  <ParentNodeStyle Font-Bold="False" />
-                  <SelectedNodeStyle Font-Underline="True" ForeColor="#5555DD" HorizontalPadding="0px" VerticalPadding="0px" />
-              </asp:TreeView>
-            </div>
-            <div id="gridContainer" style="
-    display:inline-block;  
-    position: fixed;
-    margin-top: 50px;
-    margin-left: 10px;">
-                <asp:GridView CssClass="myGrid"  ID="GridView1" runat="server" OnRowDataBound="GridView1_RowDataBound" AllowSorting="True" OnSorting="GridView1_Sorting" OnSelectedIndexChanged="GridView1_SelectedIndexChanged"/>
-                <asp:Literal runat="server" id="txtValueA" EnableViewState="false" />
-            </div>
+        <div id="document">
+            <h1 runat="server" id="h01">Test</h1>
+            <asp:Literal runat="server" id="txtValueA" EnableViewState="false" >txtTest</asp:Literal>
+            <form id="form1" runat="server">
+                <div style ="border:1px solid #000;display:inline-block">
+                  <asp:TreeView ID="TreeView1" style="display:inline-block;overflow-y:scroll" ImageSet="Arrows" runat="server">
+                      <HoverNodeStyle Font-Underline="True" ForeColor="#5555DD" />
+                    <Nodes>
+                    </Nodes>
+                      <NodeStyle Font-Names="Tahoma" Font-Size="10pt" ForeColor="Black" HorizontalPadding="5px" NodeSpacing="0px" VerticalPadding="0px" />
+                      <ParentNodeStyle Font-Bold="False" />
+                      <SelectedNodeStyle Font-Underline="True" ForeColor="#5555DD" HorizontalPadding="0px" VerticalPadding="0px" />
+                  </asp:TreeView>
+                </div>
+                <div id="gridContainer" style="
+        display:inline-block;  
+        position: fixed;
+        margin-top: 50px;
+        margin-left: 10px;">
+                    <asp:GridView CssClass="myGrid"  ID="GridView1" runat="server" OnRowDataBound="GridView1_RowDataBound" AllowSorting="True" OnSorting="GridView1_Sorting" OnSelectedIndexChanged="GridView1_SelectedIndexChanged"/>
                     
-
-        </form>
+                </div>                 
+            </form>
+        </div>
     </body>
 </html>
 

@@ -8,17 +8,20 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 
 public partial class _Default : System.Web.UI.Page
-{ 
+{
+
     protected void Page_Load(object sender, EventArgs e)
     {
-
+        
         if (!IsPostBack)
         {
 
             GridView_All();
+            Populate_TreeView1();
         }
         else
         {
+
             if (Request["__EVENTTARGET"] == "form1")
             {
                // txtValueA.Text = Request["__EVENTARGUMENT"];
@@ -28,12 +31,14 @@ public partial class _Default : System.Web.UI.Page
                 
                 Response.Redirect("/computer.aspx?computer=" + Request["__EVENTARGUMENT"]);
             }
+
             else
             {
 
                 GridView_All();
             }
-
+            string[] split = Request["__EVENTARGUMENT"].Split(new Char[] { '-' });
+            txtValueA.Text = split[split.Count() - 1];
         }
 
     }
@@ -72,17 +77,18 @@ public partial class _Default : System.Web.UI.Page
        // txtValueA.Text = dt.Rows[0][0].ToString();
         GridView1.DataBind();
 
-
-
+    }
+    protected void Populate_TreeView1()
+    {
         // Populate TreeView
-         connectionString = "Data Source=C:\\programdata\\Admin Arsenal\\Database.db";
+        String connectionString = "Data Source=C:\\programdata\\Admin Arsenal\\Database.db";
         //String connectionString = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
-         selectCommand = "select * from collections order by Name asc";
+        String selectCommand = "select * from collections order by Name asc";
         //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
-         dataAdapter =
-                    new SQLiteDataAdapter(selectCommand, connectionString);
-
-         dt = new DataTable();
+        SQLiteDataAdapter dataAdapter =
+                   new SQLiteDataAdapter(selectCommand, connectionString);
+        TreeView1.Nodes.Clear();
+        DataTable dt = new DataTable();
         dataAdapter.Fill(dt);
         foreach (DataRow node in dt.Rows)
         {
@@ -91,23 +97,32 @@ public partial class _Default : System.Web.UI.Page
                 TreeNode nodeParent = new TreeNode();
                 nodeParent.Text = node["Name"].ToString();
                 nodeParent.Value = node["CollectionId"].ToString();
-                 TreeView1.Nodes.Add(nodeParent);
-                
-                foreach (DataRow cNode in dt.Rows)
-                {
-                    if (cNode["ParentID"].ToString() == nodeParent.Value.ToString())
-                    {
-                        TreeNode nodeChild = new TreeNode();
-                        nodeChild.Text = cNode["Name"].ToString();
-                        nodeChild.Value = cNode["CollectionId"].ToString();
-                        nodeParent.ChildNodes.Add(nodeChild);
-                    }
-                }
+
+                TreeView1.Nodes.Add(nodeParent);
+
+                Populate_Nodes(dt, nodeParent);
+                nodeParent.Value = "-" + node["CollectionId"].ToString();
                 nodeParent.Collapse();
             }
 
-        }
 
+        }
+    }
+    protected void Populate_Nodes(DataTable dt, TreeNode nodeParent)
+    {
+        foreach (DataRow cNode in dt.Rows)
+        {
+            if (cNode["ParentID"].ToString() == nodeParent.Value.ToString())
+            {
+                TreeNode nodeChild = new TreeNode();
+                nodeChild.Text = cNode["Name"].ToString();
+                nodeChild.Value = cNode["CollectionId"].ToString();
+                nodeParent.ChildNodes.Add(nodeChild);
+                Populate_Nodes(dt, nodeChild);
+                nodeChild.Value = "-" + cNode["CollectionId"].ToString();
+                nodeChild.Collapse();
+            }
+        }
     }
     protected void GridView1_RowDataBound(object sender, GridViewRowEventArgs e)
     {
