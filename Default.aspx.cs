@@ -9,10 +9,10 @@ using System.Web.UI.WebControls;
 
 public partial class _Default : System.Web.UI.Page
 {
-
+    const string CONNECTION = "Data Source=C:\\programdata\\Admin Arsenal\\Database.db";
     protected void Page_Load(object sender, EventArgs e)
     {
-        
+
         if (!IsPostBack)
         {
 
@@ -24,33 +24,128 @@ public partial class _Default : System.Web.UI.Page
 
             if (Request["__EVENTTARGET"] == "form1")
             {
-               // txtValueA.Text = Request["__EVENTARGUMENT"];
-               // txtValueA.Text = Request["__EVENTTARGET"];
-                GridView_System(Request["__EVENTARGUMENT"]);
-
-                
                 Response.Redirect("/computer.aspx?computer=" + Request["__EVENTARGUMENT"]);
             }
+            else if (Request["__EVENTTARGET"] == "TreeView1")
+            {
+                string[] split = Request["__EVENTARGUMENT"].Split(new Char[] { '-' });
+                txtValueA.Text = split[split.Count() - 1].ToString();
 
+                GridView_Tree(Int32.Parse(split[split.Count() - 1 ]));
+            }
             else
             {
-
                 GridView_All();
             }
-            string[] split = Request["__EVENTARGUMENT"].Split(new Char[] { '-' });
-            txtValueA.Text = split[split.Count() - 1];
         }
-
     }
+    protected void GridView_Tree(int node)
+    {
+        String selectCommand = "select Path,Type,ReportDefinitionId,ADDistinguishedName from collections WHERE CollectionId =" + node;
+        SQLiteDataAdapter dataAdapter = new SQLiteDataAdapter(selectCommand, CONNECTION);
 
+        DataTable dt = new DataTable();
+        dataAdapter.Fill(dt);
+        GridView1.DataSource = dt;
+        GridView1.DataBind();
+
+        if (dt.Rows[0][1].ToString() == "DynamicCollection") // Collection corrosponds to a report, Not AD Path or Group
+        {
+            int reportDefinitionId = Int32.Parse(dt.Rows[0][2].ToString());
+            // Has a ReportDefinitionId, Get Comparison Operator of RootFilter
+            txtValueA.Text = dt.Rows[0][1].ToString();
+            
+            selectCommand = "select Comparison from ReportDefinitionFilters WHERE Type = 'RootFilter' AND ReportDefinitionId =" + reportDefinitionId;
+            dataAdapter = new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+            dt = new DataTable();
+            dataAdapter.Fill(dt);
+            string select;
+            switch (dt.Rows[0][0].ToString())
+            {
+                case ("All"): select = "*";
+                    break;
+            }
+            // Get Value Data
+            
+            selectCommand = "select TableName,ColumnName,Comparison,Value from ReportDefinitionFilters WHERE Type = 'ValueFilter' AND ReportDefinitionId =" + reportDefinitionId;
+            dataAdapter = new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+            dt = new DataTable();
+            dataAdapter.Fill(dt);
+            GridView1.DataSource = dt;
+            GridView1.DataBind();
+            // Query with Value Data
+            string table;
+            string column;
+            string operant;
+            if (dt.Rows[0][0].ToString() != null)
+            {
+                table = " FROM " + dt.Rows[0][0].ToString();
+                column = " WHERE " + dt.Rows[0][1].ToString();
+                operant = dt.Rows[0][2].ToString();
+                switch (operant)
+                {
+                    case ("IsTrue"): operant = " = 1";
+                        break;
+                    case ("After"): operant = ">= date('now','-" + dt.Rows[0][3].ToString().Replace(" ago", "") + "')";
+                        break;
+                    case ("Before"):
+                        operant = "<= date('now','-" + dt.Rows[0][3].ToString().Replace(" ago", "") + "')";
+                        break;
+                    case ("!Contains"):
+                        operant = " NOT LIKE '%" + dt.Rows[0][3].ToString() + "%'";
+                        break;
+                    case ("Contains"):
+                        operant = " LIKE  '%" + dt.Rows[0][3].ToString() + "%'";
+                        break;
+                }
+                dt = new DataTable();
+                try {
+                    selectCommand = "select *" + table + "s" + column + operant;
+                    dataAdapter = new SQLiteDataAdapter(selectCommand, CONNECTION);
+                    dataAdapter.Fill(dt);
+                } catch
+                {
+                    try {
+                        selectCommand = "select *" + table + "es" + column + operant;
+                        dataAdapter = new SQLiteDataAdapter(selectCommand, CONNECTION);
+                        dataAdapter.Fill(dt);
+                    }
+                    catch
+                    {
+                        txtValueA.Text = selectCommand;
+                    }
+                }
+
+                txtValueA.Text = selectCommand;
+                GridView1.DataSource = dt;
+                GridView1.DataBind();
+            }
+
+            
+
+
+        }
+        else if (dt.Rows[0][1].ToString() == "ActiveDirectoryCollection") // Collection is an AD 
+        {
+            selectCommand = "select * from Computers WHERE ADParentDistinguishedName = '" + dt.Rows[0][3].ToString() + "'";
+            dataAdapter = new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+            dt = new DataTable();
+            dataAdapter.Fill(dt);
+            GridView1.DataSource = dt;
+            GridView1.DataBind();
+        }
+    }
     protected void GridView_System(string system)
     {
-        String connectionString = "Data Source=C:\\programdata\\Admin Arsenal\\Database.db";
-        //String connectionString = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
+        
+        //String CONNECTION = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
         String selectCommand = "select ComputerId, Name, HostName, IsOnline from computers WHERE Name = '" + system + "' order by Name asc";
         //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
         SQLiteDataAdapter dataAdapter =
-                    new SQLiteDataAdapter(selectCommand, connectionString);
+                    new SQLiteDataAdapter(selectCommand, CONNECTION);
 
         DataTable dt = new DataTable();
         dataAdapter.Fill(dt);
@@ -62,12 +157,12 @@ public partial class _Default : System.Web.UI.Page
     }
     protected void GridView_All()
     {
-        String connectionString = "Data Source=C:\\programdata\\Admin Arsenal\\Database.db";
-        //String connectionString = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
+        
+        //String CONNECTION = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
         String selectCommand = "select * from computers order by Name asc";
         //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
         SQLiteDataAdapter dataAdapter =
-                    new SQLiteDataAdapter(selectCommand, connectionString);
+                    new SQLiteDataAdapter(selectCommand, CONNECTION);
 
         DataTable dt = new DataTable();
         dataAdapter.Fill(dt);
@@ -81,12 +176,12 @@ public partial class _Default : System.Web.UI.Page
     protected void Populate_TreeView1()
     {
         // Populate TreeView
-        String connectionString = "Data Source=C:\\programdata\\Admin Arsenal\\Database.db";
-        //String connectionString = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
+        
+        //String CONNECTION = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
         String selectCommand = "select * from collections order by Name asc";
         //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
         SQLiteDataAdapter dataAdapter =
-                   new SQLiteDataAdapter(selectCommand, connectionString);
+                   new SQLiteDataAdapter(selectCommand, CONNECTION);
         TreeView1.Nodes.Clear();
         DataTable dt = new DataTable();
         dataAdapter.Fill(dt);
@@ -150,7 +245,7 @@ public partial class _Default : System.Web.UI.Page
             DataRow dr = ((DataRowView)e.Row.DataItem).Row;
             DataView dv = ((DataRowView)e.Row.DataItem).DataView;
             DataRowView drv = e.Row.DataItem as DataRowView;
-
+         //   txtValueA.Text = " TEST " + txtValueA.Text;
 
             for (int i = 0; i < e.Row.Cells.Count; i++)
             {
@@ -201,11 +296,13 @@ public partial class _Default : System.Web.UI.Page
             //e.Row.Attributes.Add("onclick", Page.ClientScript.GetPostBackEventReference(this.GridView1, "Select$" + e.Row.RowIndex.ToString()));
             //  e.Row.Cells[0].Text = dr["Name"].ToString();
 
-
-            e.Row.Attributes.Add("ondblclick", Page.ClientScript.GetPostBackEventReference(this.form1, dr["ComputerId"].ToString()));
-            e.Row.Attributes.Add("class", "system" + dr["ComputerId"].ToString());
-            e.Row.Attributes.Add("onmouseover", "hvrstart('" + "system" + dr["ComputerId"].ToString() + "')");
-            e.Row.Attributes.Add("onmouseleave", "hvrleave('" + "system" + dr["ComputerId"].ToString() + "')");
+            if (dr.Table.Columns.Contains("ComputerId"))
+            { 
+                e.Row.Attributes.Add("ondblclick", Page.ClientScript.GetPostBackEventReference(this.form1, dr["ComputerId"].ToString()));
+                e.Row.Attributes.Add("class", "system" + dr["ComputerId"].ToString());
+                e.Row.Attributes.Add("onmouseover", "hvrstart('" + "system" + dr["ComputerId"].ToString() + "')");
+                e.Row.Attributes.Add("onmouseleave", "hvrleave('" + "system" + dr["ComputerId"].ToString() + "')");
+            }
         }
 
 
