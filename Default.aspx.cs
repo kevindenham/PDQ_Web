@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
 using System.Linq;
+using System.Net;
 using System.Web;
+using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 public partial class _Default : System.Web.UI.Page
 {
-    const string CONNECTION = "Data Source=C:\\programdata\\Admin Arsenal\\Database.db";
-    protected void Page_Load(object sender, EventArgs e)
+     const string CONNECTION = "Data Source=C:\\ProgramData\\Admin arsenal\\PDQ Inventory\\Database.db";
+     protected void Page_Load(object sender, EventArgs e)
     {
+
+
 
         if (!IsPostBack)
         {
@@ -38,7 +42,10 @@ public partial class _Default : System.Web.UI.Page
                 GridView_All();
             }
         }
+
+        
     }
+    // Populate left Navbar TreeView
     protected void GridView_Tree(int node)
     {
         String selectCommand = "select Path,Type,ReportDefinitionId,ADDistinguishedName from collections WHERE CollectionId =" + node;
@@ -88,6 +95,9 @@ public partial class _Default : System.Web.UI.Page
                 {
                     case ("IsTrue"): operant = " = 1";
                         break;
+                    case ("IsFalse"):
+                        operant = " = 0";
+                        break;
                     case ("After"): operant = ">= date('now','-" + dt.Rows[0][3].ToString().Replace(" ago", "") + "')";
                         break;
                     case ("Before"):
@@ -98,6 +108,9 @@ public partial class _Default : System.Web.UI.Page
                         break;
                     case ("Contains"):
                         operant = " LIKE  '%" + dt.Rows[0][3].ToString() + "%'";
+                        break;
+                    case ("Equals"):
+                        operant = " = " + dt.Rows[0][3].ToString();
                         break;
                 }
                 dt = new DataTable();
@@ -159,7 +172,7 @@ public partial class _Default : System.Web.UI.Page
     {
         
         //String CONNECTION = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
-        String selectCommand = "select * from computers order by Name asc";
+        String selectCommand = "select HostName,Name,IsOnline,IPAddress,ScanErrorMessage,OSName,Memory,SerialNumber,BootTime,Manufacturer,Model,Chassis,ComputerID from computers order by Name asc";
         //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
         SQLiteDataAdapter dataAdapter =
                     new SQLiteDataAdapter(selectCommand, CONNECTION);
@@ -172,6 +185,62 @@ public partial class _Default : System.Web.UI.Page
        // txtValueA.Text = dt.Rows[0][0].ToString();
         GridView1.DataBind();
 
+
+        // Populate Dialog UI dropdown with scan users
+        selectCommand = "select * from credentials order by IsDefault asc";
+
+        dataAdapter =
+                    new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+        dt = new DataTable();
+        dataAdapter.Fill(dt);
+
+        // Find the Default User
+        int rIndex = 0;
+        foreach (DataRow row in dt.Rows)
+        {
+            if (row["IsDefault"].ToString() == "1")
+            {
+                dt.Rows[rIndex]["UserName"] = "(Default) " + row["UserName"].ToString();
+                dt.Rows[rIndex]["CredentialsId"] = -1;
+                break;
+            }
+            rIndex++;
+        }
+
+        DropDownList1.DataTextField = "UserName";
+        DropDownList1.DataValueField = "CredentialsId";
+
+        DropDownList1.DataSource = dt;
+        DropDownList1.DataBind();
+        DropDownList1.SelectedIndex = rIndex;
+
+        // Then add your first item
+        DropDownList1.Items.Insert(0, "Select");
+
+        // Populate DropDown of Systems not on loan
+        selectCommand = @"select Computers.Name, Computers.ComputerId
+                            FROM  CustomComputerValues
+                            INNER JOIN Computers
+                            ON Computers.ComputerId = CustomComputerValues.ComputerId
+                            WHERE CustomComputerValues.CustomComputerItemId = 22
+                            AND CustomComputerValues.Value = '1'";
+
+        dataAdapter =
+                    new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+        dt = new DataTable();
+        dataAdapter.Fill(dt);
+
+
+        DropDownList2.DataTextField = "Name";
+        DropDownList2.DataValueField = "ComputerId";
+
+        DropDownList2.DataSource = dt;
+        DropDownList2.DataBind();
+
+        // Then add your first item
+        DropDownList2.Items.Insert(0, "Select");
     }
     protected void Populate_TreeView1()
     {
@@ -228,8 +297,7 @@ public partial class _Default : System.Web.UI.Page
             for (int i = 0; i < e.Row.Cells.Count; i++)
             {
                 LinkButton LnkHeaderText = e.Row.Cells[i].Controls[0] as LinkButton;
-                e.Row.Cells[i].Attributes["onclick"] = Page.ClientScript.GetPostBackClientHyperlink(this.GridView1, "Sort$" + LnkHeaderText.Text);
-
+                
                 BoundField field = (BoundField)((DataControlFieldCell)e.Row.Cells[i]).ContainingField;
                 if (field.HeaderText == "ComputerId")
                 {
@@ -299,6 +367,7 @@ public partial class _Default : System.Web.UI.Page
             if (dr.Table.Columns.Contains("ComputerId"))
             { 
                 e.Row.Attributes.Add("ondblclick", Page.ClientScript.GetPostBackEventReference(this.form1, dr["ComputerId"].ToString()));
+                e.Row.Attributes.Add("id", "system" + dr["ComputerId"].ToString());
                 e.Row.Attributes.Add("class", "system" + dr["ComputerId"].ToString());
                 e.Row.Attributes.Add("onmouseover", "hvrstart('" + "system" + dr["ComputerId"].ToString() + "')");
                 e.Row.Attributes.Add("onmouseleave", "hvrleave('" + "system" + dr["ComputerId"].ToString() + "')");
@@ -363,5 +432,44 @@ public partial class _Default : System.Web.UI.Page
             ViewState["SortDirection"] = value; 
         } 
     }
+    [WebMethod]
+    public static string GetHostName(string name)
+    {
+        try { return Dns.GetHostEntry(name).HostName; } catch { return ""; }
+    }
+    [WebMethod]
+    public static string LoanDevice(string name, string loan_user, string date)
+    {
 
+        DataTable dt = new DataTable();
+        String selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, 22, 1
+                                FROM Computers
+                                WHERE Computers.Name = '" + name + "'";
+
+        SQLiteDataAdapter dataAdapter =
+                    new SQLiteDataAdapter(selectCommand, CONNECTION);
+        selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, 22, 1
+                                FROM Computers
+                                WHERE Computers.Name = 'M4800-2557-KD'";
+
+
+        try { return Dns.GetHostEntry(name).HostName; } catch { return ""; }
+    }
+    [WebMethod]
+    public static string AddComputer(string name, string hostname, string credentialid)
+    {
+        DateTime time = DateTime.Now;
+
+        string format = "yyyy-MM-dd HH:mm:ss";
+        String selectCommand = "INSERT INTO Computers (ScanUserId, Name, HostName, Added, Memory,OSServicePack,OSArchitecture,ProcessorCount,ProcessorCores,ProcessorSpeed,IPAddress,IsOnline,RequiresDotNet,NeedsReboot) values(" + credentialid + ",'" + name + "','" + hostname + "', '" + time.ToString(format) + "', 0, 0, 0,0,0,0,' ',0,0,0)";
+
+        //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
+        SQLiteConnection sqConnection = new SQLiteConnection(CONNECTION);
+        SQLiteCommand sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        SQLiteDataReader sqReader = sqCommand.ExecuteReader();
+        return "";
+    }
 }
