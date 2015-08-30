@@ -5,17 +5,18 @@ using System.Data.SQLite;
 using System.Linq;
 using System.Net;
 using System.Web;
+using System.Web.Script.Serialization;
 using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 public partial class _Default : System.Web.UI.Page
 {
-     const string CONNECTION = "Data Source=C:\\ProgramData\\Admin arsenal\\PDQ Inventory\\Database.db";
+     const string CONNECTION = "Data Source=C:\\ProgramData\\Admin arsenal\\pdq inventory\\Database.db";
      protected void Page_Load(object sender, EventArgs e)
     {
 
-
+        
 
         if (!IsPostBack)
         {
@@ -33,7 +34,7 @@ public partial class _Default : System.Web.UI.Page
             else if (Request["__EVENTTARGET"] == "TreeView1")
             {
                 string[] split = Request["__EVENTARGUMENT"].Split(new Char[] { '-' });
-                txtValueA.Text = split[split.Count() - 1].ToString();
+                //txtValueA.Text = split[split.Count() - 1].ToString();
 
                 GridView_Tree(Int32.Parse(split[split.Count() - 1 ]));
             }
@@ -60,7 +61,7 @@ public partial class _Default : System.Web.UI.Page
         {
             int reportDefinitionId = Int32.Parse(dt.Rows[0][2].ToString());
             // Has a ReportDefinitionId, Get Comparison Operator of RootFilter
-            txtValueA.Text = dt.Rows[0][1].ToString();
+        //    txtValueA.Text = dt.Rows[0][1].ToString();
             
             selectCommand = "select Comparison from ReportDefinitionFilters WHERE Type = 'RootFilter' AND ReportDefinitionId =" + reportDefinitionId;
             dataAdapter = new SQLiteDataAdapter(selectCommand, CONNECTION);
@@ -127,11 +128,11 @@ public partial class _Default : System.Web.UI.Page
                     }
                     catch
                     {
-                        txtValueA.Text = selectCommand;
+                       // txtValueA.Text = selectCommand;
                     }
                 }
 
-                txtValueA.Text = selectCommand;
+               // txtValueA.Text = selectCommand;
                 GridView1.DataSource = dt;
                 GridView1.DataBind();
             }
@@ -170,9 +171,11 @@ public partial class _Default : System.Web.UI.Page
     }
     protected void GridView_All()
     {
-        
+
         //String CONNECTION = "Data Source=\\\\10.198.102.88\\c$\\ProgramData\\Admin Arsenal\\PDQ Inventory\\Database.db";
-        String selectCommand = "select HostName,Name,IsOnline,IPAddress,ScanErrorMessage,OSName,Memory,SerialNumber,BootTime,Manufacturer,Model,Chassis,ComputerID from computers order by Name asc";
+//        String selectCommand = "select HostName,Name,IsOnline,IPAddress,ScanErrorMessage,OSName,Memory,SerialNumber,BootTime,Manufacturer,Model,Chassis,ComputerID from computers order by Name asc";
+
+        String selectCommand = "select * from computers order by Name asc";
         //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
         SQLiteDataAdapter dataAdapter =
                     new SQLiteDataAdapter(selectCommand, CONNECTION);
@@ -218,29 +221,6 @@ public partial class _Default : System.Web.UI.Page
         // Then add your first item
         DropDownList1.Items.Insert(0, "Select");
 
-        // Populate DropDown of Systems not on loan
-        selectCommand = @"select Computers.Name, Computers.ComputerId
-                            FROM  CustomComputerValues
-                            INNER JOIN Computers
-                            ON Computers.ComputerId = CustomComputerValues.ComputerId
-                            WHERE CustomComputerValues.CustomComputerItemId = 22
-                            AND CustomComputerValues.Value = '1'";
-
-        dataAdapter =
-                    new SQLiteDataAdapter(selectCommand, CONNECTION);
-
-        dt = new DataTable();
-        dataAdapter.Fill(dt);
-
-
-        DropDownList2.DataTextField = "Name";
-        DropDownList2.DataValueField = "ComputerId";
-
-        DropDownList2.DataSource = dt;
-        DropDownList2.DataBind();
-
-        // Then add your first item
-        DropDownList2.Items.Insert(0, "Select");
     }
     protected void Populate_TreeView1()
     {
@@ -437,39 +417,422 @@ public partial class _Default : System.Web.UI.Page
     {
         try { return Dns.GetHostEntry(name).HostName; } catch { return ""; }
     }
+
     [WebMethod]
-    public static string LoanDevice(string name, string loan_user, string date)
+    public static int GetOrders()
     {
+        int active_orders = 0;
+        int previous_orders = 0;
+        try {
+            // Get the highest order number from all previous orders
+            String selectCommand = "SELECT value FROM CustomComputerValues WHERE CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE Name = 'LoanPreviousOrder') ORDER by value DESC LIMIT 1";
+            SQLiteConnection sqConnection = new SQLiteConnection(CONNECTION);
+            SQLiteCommand sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+            sqConnection.Open();
+            SQLiteDataReader sqReader = sqCommand.ExecuteReader();
 
-        DataTable dt = new DataTable();
+            while (sqReader.Read())
+            {
+                previous_orders = Int32.Parse(sqReader.GetString(0));
+            }
+            // Get the highest order number from all active orders
+            selectCommand = "SELECT value FROM CustomComputerValues WHERE CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE Name = 'LoanOrder') ORDER by value DESC LIMIT 1";
+            sqConnection = new SQLiteConnection(CONNECTION);
+            sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+            sqConnection.Open();
+            sqReader = sqCommand.ExecuteReader();
+
+            while (sqReader.Read())
+            {
+                active_orders = Int32.Parse(sqReader.GetString(0));
+            }
+            // Compare the results and send back highest order number as result
+            if (active_orders >= previous_orders)
+                return active_orders;
+            else
+                return previous_orders;
+
+        }
+        catch 
+        { return 99; }
+
+    }
+
+    [WebMethod]
+    public static void LoanDevice(string name, string loan_user, string date, string order)
+    {
+        // Register device as loaned
         String selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
-                                SELECT Computers.ComputerId, 22, 1
-                                FROM Computers
-                                WHERE Computers.Name = '" + name + "'";
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, 1
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'IsLoaned'";
 
-        SQLiteDataAdapter dataAdapter =
-                    new SQLiteDataAdapter(selectCommand, CONNECTION);
+        SQLiteConnection sqConnection = new SQLiteConnection(CONNECTION);
+        SQLiteCommand sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        SQLiteDataReader sqReader = sqCommand.ExecuteReader();
+        
+        // Register user loaning device
         selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
-                                SELECT Computers.ComputerId, 22, 1
-                                FROM Computers
-                                WHERE Computers.Name = 'M4800-2557-KD'";
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, '" + loan_user + @"'
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'LoanUser'";
 
+        sqConnection = new SQLiteConnection(CONNECTION);
+        sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        sqReader = sqCommand.ExecuteReader();
 
-        try { return Dns.GetHostEntry(name).HostName; } catch { return ""; }
+        // Register due date
+        selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, '" + date + @"'
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'LoanDueDate'";
+
+        sqConnection = new SQLiteConnection(CONNECTION);
+        sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        sqReader = sqCommand.ExecuteReader();
+
+        //Register order number
+        selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, '" + order + @"'
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'LoanOrder'";
+
+        sqConnection = new SQLiteConnection(CONNECTION);
+        sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        sqReader = sqCommand.ExecuteReader();
+
     }
     [WebMethod]
-    public static string AddComputer(string name, string hostname, string credentialid)
+    public static void AddComputer(string name, string hostname, string credentialid)
     {
+        // PDQ will not attempt to scan a device with no hostname, it will try to re-resolve it though if it is available later
+        // Oddly, if no hostname is provided PDQ will also force the IP address to be the PDQ server itself, and will not try to re-resolve
+        if (hostname == "")
+            hostname = name;
+
         DateTime time = DateTime.Now;
 
         string format = "yyyy-MM-dd HH:mm:ss";
-        String selectCommand = "INSERT INTO Computers (ScanUserId, Name, HostName, Added, Memory,OSServicePack,OSArchitecture,ProcessorCount,ProcessorCores,ProcessorSpeed,IPAddress,IsOnline,RequiresDotNet,NeedsReboot) values(" + credentialid + ",'" + name + "','" + hostname + "', '" + time.ToString(format) + "', 0, 0, 0,0,0,0,' ',0,0,0)";
+        String selectCommand = "INSERT INTO Computers (ScanUserId, Name, HostName, Added, Memory,OSServicePack,OSArchitecture,ProcessorCount,ProcessorCores,ProcessorSpeed,IPAddress,IsOnline,RequiresDotNet,NeedsReboot) values('" + credentialid + "','" + name + "','" + hostname + "', '" + time.ToString(format) + "', 0, 0, 0,0,0,0,' ',0,0,0)";
 
         //        String selectCommand = "select Name, IsOnline, Chassis from computers order by computerid desc";
         SQLiteConnection sqConnection = new SQLiteConnection(CONNECTION);
         SQLiteCommand sqCommand = new SQLiteCommand(selectCommand, sqConnection);
         sqConnection.Open();
         SQLiteDataReader sqReader = sqCommand.ExecuteReader();
+    }
+
+    [WebMethod]
+    public static string[] GetOnLoan()
+        {
+        var computerList = new List<string>();
+
+        try
+        {
+            // Get a list of all items not on loan
+            String selectCommand = @"select name from computers where name NOT IN(
+                            select Computers.Name
+                            FROM  CustomComputerValues
+                            INNER JOIN Computers
+                            ON Computers.ComputerId = CustomComputerValues.ComputerId
+                            WHERE CustomComputerValues.CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'IsLoaned')
+                            AND CustomComputerValues.Value = 1)";
+            SQLiteConnection sqConnection = new SQLiteConnection(CONNECTION);
+            SQLiteCommand sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+            sqConnection.Open();
+            SQLiteDataReader sqReader = sqCommand.ExecuteReader();
+
+            while (sqReader.Read())
+            {
+                computerList.Add(sqReader.GetString(0));
+            }
+        }
+        catch { }
+
+        string[] onLoan = computerList.ToArray();
+        return onLoan;
+        }
+
+    [WebMethod]
+    public static string ReturnList()
+    {
+
+        // Get a list of all items not on loan
+        String selectCommand = @"
+                            select Computers.Name, Computers.ComputerId
+                            FROM  CustomComputerValues
+                            INNER JOIN Computers
+                            ON Computers.ComputerId = CustomComputerValues.ComputerId
+                            WHERE CustomComputerValues.CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'IsLoaned')
+                            AND CustomComputerValues.Value = 1";
+        SQLiteDataAdapter dataAdapter =
+                    new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+        DataTable dt = new DataTable();
+
+        dataAdapter.Fill(dt);
+        dt.Columns.Add("LoanedTo", typeof(System.String));
+        dt.Columns.Add("DueDate", typeof(System.String));
+        dt.Columns.Add("LoanOrder", typeof(System.String));
+
+        List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+        Dictionary<string, object> row = null;
+
+        // Above Query gets just the computerID and name for each system currently on loan, go into each row and get additional info
+        foreach (DataRow dr in dt.Rows)
+        {
+
+            // Query Loan user for this row
+            try {
+                string compID = dr["ComputerID"].ToString();
+                selectCommand = @"
+                            SELECT Value
+                            FROM CustomComputerValues
+                            WHERE ComputerID = " + compID + @"
+                            AND CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'LoanUser')
+                            ";
+                dataAdapter =
+                        new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+                DataTable dt2 = new DataTable();
+                dataAdapter.Fill(dt2);
+                dr["LoanedTo"] = dt2.Rows[0]["Value"].ToString();
+            } catch
+            {
+
+            }
+
+            // Query due date for this row
+            try
+            {
+                string compID = dr["ComputerID"].ToString();
+                selectCommand = @"
+                            SELECT Value
+                            FROM CustomComputerValues
+                            WHERE ComputerID = " + compID + @"
+                            AND CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'LoanDueDate')
+                            ";
+                dataAdapter =
+                        new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+                DataTable dt3 = new DataTable();
+                dataAdapter.Fill(dt3);
+                dr["DueDate"] = dt3.Rows[0]["Value"].ToString();
+            }
+            catch
+            {
+
+            }
+
+            try
+            {
+                string compID = dr["ComputerID"].ToString();
+                selectCommand = @"
+                            SELECT Value
+                            FROM CustomComputerValues
+                            WHERE ComputerID = " + compID + @"
+                            AND CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'LoanOrder')
+                            ";
+                dataAdapter =
+                        new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+                DataTable dt4 = new DataTable();
+                dataAdapter.Fill(dt4);
+                dr["LoanOrder"] = dt4.Rows[0]["Value"].ToString();
+            }
+            catch
+            {
+
+            }
+
+
+            row = new Dictionary<string, object>();
+            foreach (DataColumn col in dt.Columns)
+            {
+                row.Add(col.ColumnName, dr[col]);
+            }
+            rows.Add(row);
+        }
+        JavaScriptSerializer json = new JavaScriptSerializer();
+        return json.Serialize(rows);
+
+    }
+
+    [WebMethod]
+    public static void ReturnDevice(string name, string order)
+    {
+        // Mark Loan user as available
+        String selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, 'Available'
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'LoanUser'";
+
+        SQLiteConnection sqConnection = new SQLiteConnection(CONNECTION);
+        SQLiteCommand sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        SQLiteDataReader sqReader = sqCommand.ExecuteReader();
+
+        // Register previous order number
+        selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, '" + order + @"'
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'LoanPreviousOrder'";
+
+        sqConnection = new SQLiteConnection(CONNECTION);
+        sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        sqReader = sqCommand.ExecuteReader();
+
+        // Unregister Device as loaned
+        selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, 0
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'IsLoaned'";
+
+        sqConnection = new SQLiteConnection(CONNECTION);
+        sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        sqReader = sqCommand.ExecuteReader();
+
+        // Null order number
+        selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, NULL
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'LoanOrder'";
+
+        sqConnection = new SQLiteConnection(CONNECTION);
+        sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        sqReader = sqCommand.ExecuteReader();
+
+        // Null due date
+        selectCommand = @"INSERT or REPLACE INTO CustomComputerValues (ComputerId, CustomComputerItemId, Value)
+                                SELECT Computers.ComputerId, CustomComputerItems.CustomComputerItemId, NULL
+                                FROM Computers, CustomComputerItems
+                                WHERE Computers.Name = '" + name + @"'
+                                AND CustomComputerItems.Name = 'LoanDueDate'";
+
+        sqConnection = new SQLiteConnection(CONNECTION);
+        sqCommand = new SQLiteCommand(selectCommand, sqConnection);
+        sqConnection.Open();
+        sqReader = sqCommand.ExecuteReader();
+    }
+
+    [WebMethod]
+    public static string AllDevices()
+    {
+        // Get a list of all items not on loan
+        String selectCommand = @"
+                            select Computers.Name, Computers.ComputerId
+                            FROM  CustomComputerValues
+                            INNER JOIN Computers
+                            ON Computers.ComputerId = CustomComputerValues.ComputerId
+                            WHERE CustomComputerValues.CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'IsLoaned')
+                            AND CustomComputerValues.Value = 1";
+        SQLiteDataAdapter dataAdapter =
+                    new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+        DataTable dt = new DataTable();
+
+        dataAdapter.Fill(dt);
+        dt.Columns.Add("LoanedTo", typeof(System.String));
+        dt.Columns.Add("DueDate", typeof(System.String));
+        dt.Columns.Add("LoanOrder", typeof(System.String));
+
+        List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+        Dictionary<string, object> row = null;
+
+        // Above Query gets just the computerID and name for each system currently on loan, go into each row and get additional info
+        foreach (DataRow dr in dt.Rows)
+        {
+
+            // Query Loan user for this row
+            try
+            {
+                string compID = dr["ComputerID"].ToString();
+                selectCommand = @"
+                            SELECT Value
+                            FROM CustomComputerValues
+                            WHERE ComputerID = " + compID + @"
+                            AND CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'LoanUser')
+                            ";
+                dataAdapter =
+                        new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+                DataTable dt2 = new DataTable();
+                dataAdapter.Fill(dt2);
+                dr["LoanedTo"] = dt2.Rows[0]["Value"].ToString();
+            }
+            catch
+            {
+
+            }
+
+            // Query due date for this row
+            try
+            {
+                string compID = dr["ComputerID"].ToString();
+                selectCommand = @"
+                            SELECT Value
+                            FROM CustomComputerValues
+                            WHERE ComputerID = " + compID + @"
+                            AND CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'LoanDueDate')
+                            ";
+                dataAdapter =
+                        new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+                DataTable dt3 = new DataTable();
+                dataAdapter.Fill(dt3);
+                dr["DueDate"] = dt3.Rows[0]["Value"].ToString();
+            }
+            catch
+            {
+
+            }
+
+            try
+            {
+                string compID = dr["ComputerID"].ToString();
+                selectCommand = @"
+                            SELECT Value
+                            FROM CustomComputerValues
+                            WHERE ComputerID = " + compID + @"
+                            AND CustomComputerItemId = (SELECT CustomComputerItemId FROM CustomComputerItems WHERE name = 'LoanOrder')
+                            ";
+                dataAdapter =
+                        new SQLiteDataAdapter(selectCommand, CONNECTION);
+
+                DataTable dt4 = new DataTable();
+                dataAdapter.Fill(dt4);
+                dr["LoanOrder"] = dt4.Rows[0]["Value"].ToString();
+            }
+            catch
+            {
+
+            }
+
+
+            row = new Dictionary<string, object>();
+            foreach (DataColumn col in dt.Columns)
+            {
+                row.Add(col.ColumnName, dr[col]);
+            }
+            rows.Add(row);
+        }
+        JavaScriptSerializer json = new JavaScriptSerializer();
+        return json.Serialize(rows);
         return "";
     }
 }

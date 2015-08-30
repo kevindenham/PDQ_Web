@@ -95,6 +95,9 @@
         text-align: center;
         height: 82px;
     }
+    .navlinks:hover {
+       background-color: #caf1fa;
+    }
 
         .navlinks img {
             display: block;
@@ -285,8 +288,10 @@
 
                                     for (var i = 0; i < data.length; i++)
                                     {
-                                        addClick(data[i]);
-                                        var name = data[i];
+                                        if (data[i] != "") {
+                                            addClick(data[i]);
+                                            name = data[i];
+                                        }
                                     }
 
                                 } else {
@@ -346,13 +351,19 @@
         </a></li>
         <li>
             <button class="navlinks" onclick="loan_dev()" id="Button1" style="width: 85px" runat="server">
-                <img src="img/67.png" /><p>Loan Device</p>
+                <img src="img/56.png" /><p>Loan Device</p>
+            </button>
+        </li>
+        <li>
+            <button class="navlinks" onclick="return_dev()" id="Button2" style="width: 85px" runat="server">
+                <img src="img/33.png" /><p>Return Device</p>
             </button>
         </li>
 
     </ul>
     <div id="document">
         <form id="form1" runat="server">
+            <div>
             <div style="border: 1px solid #000; display: inline-block; margin: 5px 2px 0px 2px">
                 <asp:TreeView ID="TreeView1" Style="display: inline-block; overflow-y: scroll" ImageSet="Arrows" runat="server">
                     <HoverNodeStyle Font-Underline="True" ForeColor="#5555DD" />
@@ -363,13 +374,15 @@
                     <SelectedNodeStyle Font-Underline="True" ForeColor="#5555DD" HorizontalPadding="0px" VerticalPadding="0px" />
                 </asp:TreeView>
             </div>
-            <div id="gridContainer" style="display: inline-block; position: fixed; margin-top: 50px; margin-left: 10px;">
+            <label style="margin-left:20px;margin-top:5px;font-size:18px;position:fixed;"><img src='img/chassiscomputer.png' style='vertical-align:middle;' height='40' width='40'>All Devices</img></label>
+            <div id="gridContainer" style="display:inline-block;position: fixed; margin-top: 50px; margin-left: 10px;">
                 <asp:GridView CssClass="myGrid" ID="GridView1" runat="server" OnRowDataBound="GridView1_RowDataBound" AllowSorting="True" OnSorting="GridView1_Sorting" OnSelectedIndexChanged="GridView1_SelectedIndexChanged" />
 
             </div>
+            </div>
             <div id="dialog" title="Add Devices" style="width: 500px; height: 500px;">
-                <p id="comp_dialog" style="margin: 5px 5px 5px 0px">Use this window to add devices to your PDQ database.  Devices can be added by entering their names, importing a text file, or browsing Active Directory.</p>
-                <p id="comp_dialog" style="margin: 5px 5px 5px 0px">Computer Name - type a computer name and press Enter</p>
+                <p  style="margin: 5px 5px 5px 0px">Use this window to add devices to your PDQ database.  Devices can be added by entering their names, importing a text file, or browsing Active Directory.</p>
+                <p  style="margin: 5px 5px 5px 0px">Computer Name - type a computer name and press Enter</p>
 
                 <input type="text" id="input_name" style="margin: 5px 5px 5px 0px; width: 550px" maxlength="255">
                 <button id="get_hostname" onclick="getDNS($(document.getElementById('input_name'))[0].value)">Add</button>
@@ -402,26 +415,24 @@
                 </div>
             </div>
             <div id="loan_dialog" title="Loan Devices" style="width: 500px; height: 500px;">
-                <p id="comp_dialog" style="margin: 5px 5px 5px 0px">Use this window to loan devices.  You can search for devices in the database by typing their name or asset tag.</p>
-                <p id="comp_dialog" style="margin: 5px 5px 5px 0px">Computer Name - type a computer name and press Enter</p>
-                <div class="ui-widget">
-  <input id="tags" style="margin: 5px 5px 5px 0px; width: 550px" maxlength="255"><button id="add_loan" onclick="loanClick($(document.getElementById('tags'))[0].value)">Add</button>
-</div>
-
+                <p style="margin: 5px 5px 5px 0px">Use this window to loan devices.  You can search for devices in the database by typing their name or asset tag.</p>
+                
                 <div>
-                    <asp:DropDownList ID="DropDownList2" runat="server" style="display:none"></asp:DropDownList>
                     <label style="margin: 5px 5px 5px 0px">Loan To: </label>
 
                 <input type="text" id="loan_user" style="margin: 5px 5px 5px 0px; width:auto" maxlength="255">
-                        <label style="margin: 5px 5px 5px 0px">Due Date: </label><input type="text" id="datepicker">
+                        <label style="margin: 5px 5px 5px 0px">Return Date: </label><input type="text" id="datepicker">
                 </div>
+                                <div class="ui-widget">
+  <label style="margin: 5px 5px 5px 0px">Device Name: </label><input id="tags" style="margin: 5px 5px 5px 0px; width: 500px" maxlength="255"><button id="add_loan" onclick="loanClick($(document.getElementById('tags'))[0].value)">Add</button>
+</div>
                 <div>
                     <div style="border: 1px solid; width: 602px; height: 260px; float: left;">
                         <table id="loan_table" class="display compact nowrap" cellspacing="0" width="600px">
                             <thead>
                                 <tr>
                                     <th>Device</th>
-                                    <th>Loaned To</th>
+                                    <th>Loan To</th>
                                     <th>Due Date</th>                                   
                                 </tr>
                             </thead>
@@ -432,7 +443,19 @@
                     <button style="margin: 5px 3px 5px 3px; width: 100px" id="rem_loan">Remove</button>
                 </div>
             </div>
-            <asp:Literal runat="server" ID="txtValueA" EnableViewState="false">txtTest</asp:Literal>
+            <div id="return_dialog" title="Return Devices" style="width: 500px; height: 500px;">
+                <p style="margin: 5px 5px 5px 0px">Use this window to return devices.  You can search for loaned devices by typing their name or asset tag.</p>
+    <div style="margin-bottom:5px;">
+        Search: <input type="text" id="filterbox">
+    </div> 
+                <div>
+                    <div style="border: 1px solid; width: 602px; height: 260px; float: left;">
+                        <table id="return_table" class="display compact nowrap" cellspacing="0" width="600px">
+                        </table>
+                    </div>
+        
+                </div>
+            </div>
         </form>
     </div>
 </body>
@@ -440,10 +463,11 @@
 <script>
 
     $(document).ready(function () {
-        
+
         // Enter key submit for loan device input text box
         $("#tags").keyup(function (event) {
             if (event.keyCode == 13) {
+                $("#tags").blur();
                 $("#add_loan").click();
             }
         });
@@ -453,7 +477,6 @@
                 $("#get_hostname").click();
             }
         });
-
         
         // Add Datepicker for loan device
         $(function () {
@@ -513,7 +536,7 @@
         });
     });
 
-    // Create Jquery UI Dialog for Loan Device
+// Create Jquery UI Dialog for Loan Device
 $("#loan_dialog").dialog({
     autoOpen: false,
     resizable: false,
@@ -522,279 +545,429 @@ $("#loan_dialog").dialog({
 
     modal: true,
     buttons: {
-        "Submit": function () {        
-            $(this).dialog("close");
-
-            var table = document.getElementById("loan_table");
-            oTable = $('#loan_table').dataTable();
-            for (var i = 0, row; row = table.rows[i]; i++) {
-                var dName = oTable.fnGetData(i, 0);
-                if (dName) {
-                    $.ajax({
-                        type: "POST",
-                        url: "Default.aspx/LoanDevice",
-                        data: '{name: "' + dName + '"}',
-                        contentType: "application/json; charset=utf-8",
-                        dataType: "json",
-                        failure: function (response) {
-                            alert(response.d);
-                        }
-
-                    });
-                }
-            }
-        }
-    },
-    close: function () {
-    }
-});
-
-    
-    // Create Jquery UI Dialog for add device
-    
-    $("#dialog").dialog({
-        autoOpen: false,
-        resizable: false,
-    width: 750,
-    height: 535,
-    
-    modal: true,
-    buttons: {
-        "OK": function () {
-
-            var table = document.getElementById("add_table");
-            oTable = $('#add_table').dataTable();
-            for (var i = 0, row; row = table.rows[i]; i++) {
-                var dName = oTable.fnGetData(i, 0);
-                var hName = oTable.fnGetData(i, 3);
-                var credId = oTable.fnGetData(i, 5);
-                if (credId == -1)
-                {
-                    credId = "NULL";
-                }
-                if (dName) {
-                    $.ajax({
-                        type: "POST",
-                        url: "Default.aspx/AddComputer",
-                        data: '{name: "' + dName + '", hostname: "' + hName + '", credentialid: "' + credId + '"}',
-                        contentType: "application/json; charset=utf-8",
-                        dataType: "json",
-                        failure: function (response) {
-                            alert(response.d);
-                        }
-
-                    });
-                }
-            }
+        "Submit": function () {
 
 
-            
-            $(this).dialog("close");
-        },
-        Cancel: function() {
-            $(this).dialog("close");
-        }
-    },
-    close: function() {
-    }
-    });
-    
-    // Open Jquery UI DIalog for add device
-    function add_dev()
-    {
-        $("#dialog").dialog("open");
-    }
-    function loan_dev()
-    {
-        // Create an array of systems currently on loan
-        var loaned = new Array();
-        var dd2 = document.getElementById('DropDownList2');
-        for (d = 1; d < dd2.options.length; d++) {
-            loaned[d] = dd2.options[d].value;
-        }
-
-        var i = $('#GridView1 tr th a').filter(
-        function () {
-            return $(this).text() == 'Name';
-        }).parent().prevAll().length;
-
-        // Create an array of all computer names
-        var colArray = $("#GridView1 tr td:nth-child(" + (i + 1) + ")").map(function () {
-            // If name is currently in our loaned array, we exclude it
-            if ($.inArray($(this).text().trim(), loaned) === -1) {
-                return $(this).text().trim();
-            } 
-        }).get();
-
-        $("#tags").autocomplete({
-            source: colArray,
-            select: function (e, ui) {
-                $(this).next().val(ui.item.id);
-            },
-            change: function (ev, ui) {
-                if (!ui.item)
-                    $(this).val("");
-            }
-        });
-
-        $("#loan_dialog").dialog("open");
-    }
-    // Send Jquery request with add device to fetch hostname from server
-    function loanClick(theName)
-    {
-        var required = 0;
-        if ($('#loan_user').val() == '') {
-            required = 1;
-            $('#loan_user').css('border-color', 'red');
-        }
-        else {
-            $('#loan_user').css('border-color', '');
-        }
-        if ($('#datepicker').val() == '') {
-            required = 1;
-            $('#datepicker').css('border-color', 'red');
-        }
-        else {
-            $('#datepicker').css('border-color', '');
-        }
-        if ($('#tags').val() == '') {
-            required = 1;
-            $('#tags').css('border-color', 'red');
-        }
-        else {
-            $('#tags').css('border-color', '');
-        }
-        // All required fields populated, add values to table
-
-        var table = document.getElementById("loan_table");
-        oTable = $('#loan_table').dataTable();
-
-        for (var i = 0, row; row = table.rows[i]; i++) {
-            var data = oTable.fnGetData(i, 0)
-            if (data) {
-                if (typeof data === 'number') {
-                    data = "" + data;
-                }
-                if (data.toUpperCase() === $('#tags').val() || data === "")
-                    required = 1;
-            }
-        }
-        if (required != 1)
-        {
-            var table = $('#loan_table').DataTable();
-            table.row.add([
-                $('#tags').val(),
-                $('#loan_user').val(),
-                $('#datepicker').val()
-            ]).draw();
-        }
-
-    }
-
-    function addClick(theName) {
-        theName = "" + theName;
-        var chunk = theName.split(".");
-        var dName = chunk[0].toUpperCase() + "";
-        var t = document.getElementById("DropDownList1");
-        var selectedText = t.options[t.selectedIndex].text;
-        var selectedValue = t.options[t.selectedIndex].value;
-        var placeHolder = "<img src='img/ajax-loader.gif' style='vertical-align:middle;' height='15' width='15'><img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'></img>";
-        var x = 0;
-        // Verify this device is not already in the add_table
-        var table = document.getElementById("add_table");
-        oTable = $('#add_table').dataTable();
-
-        for (var i = 0, row; row = table.rows[i]; i++) {
-            var data = oTable.fnGetData(i, 0)
-            if (data) {
-                if (typeof data === 'number') {
-                    data = "" + data;
-                }
-                if (data.toUpperCase() === dName || data === "")
-                    x = 1;
-            }
-        }
-
-        // Verify this device is not in the database
-        // Get the index of the Name column
-        var i = $('#GridView1 tr th a').filter(
-        function () {
-            return $(this).text() == 'Name';
-        }).parent().prevAll().length;
-
-        // Check if the name is duplicate
-        $("#GridView1 tr td:nth-child(" + (i + 1) + ")").each(function () {
-            // Need those extra spaces because the name column includes spaces to seperate name from icon
-
-            if ($(this).text().toUpperCase() == "  " + dName) {
-                placeHolder = "<img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'> Duplicate computer name: " + theName + "</img>";
-
-            }
-        });
-
-        // Name not found in add_table or database, add to table
-        if (x === 0) {
-            // Create the extra row
-            var table = $('#add_table').DataTable();
-            table.row.add([
-                dName,
-                placeHolder,
-                selectedText,
-                "",
-                selectedText,
-                selectedValue
-            ]).draw();
-            }
-    };
-
-    function getDNS(dName) {
-        if (dName != "") {
-            addClick(dName);
+            // Incase user forgot to click the add button prior to submitting
+            $("#add_loan").click();
+            var order_number = 0;
+            var items_submitted = 0;
+            // Get the highest assigned loan order from server then increment by 1
             $.ajax({
                 type: "POST",
-                url: "Default.aspx/GetHostName",
-                data: '{name: "' + dName + '" }',
+                url: "Default.aspx/GetOrders",
+                data: '{}',
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function (response) {
-                    OnSuccess(response, dName);
+                    order_number = parseInt(response.d) + 1;
+                    var table = document.getElementById("loan_table");
+                    var oTable = $('#loan_table').dataTable();
+                    // Go row by row from the loan table and ajax them into the database
+                    for (var i = 0, row; row = table.rows[i]; i++) {
+                        var dName = oTable.fnGetData(i, 0);
+                        var loan_user = oTable.fnGetData(i, 1);
+                        var date = oTable.fnGetData(i, 2);
+                        var order = "";
+                        // Verify all required fields are present
+                        if (dName && loan_user && date) {
+                            items_submitted++;
+                            $.ajax({
+                                type: "POST",
+                                url: "Default.aspx/LoanDevice",
+                                data: '{name: "' + dName + '", loan_user: "' + loan_user + '", date: "' + date + '", order: "' + order_number + '" }',
+                                contentType: "application/json; charset=utf-8",
+                                dataType: "json",
+                                success: function (response) {
+                                   
+                                },
+                                failure: function (response) {
+                                    items_submitted--;
+                                    alert(response.d);
+                                }
+                            });
+                        }
+                    }
+                    if (items_submitted > 0) {
+                        alert("Order #" + order_number + " has been submitted for " + items_submitted + " total items.")
+                        $("#loan_dialog").dialog("close");
+                        oTable.fnClearTable();
+
+                    } else {
+                        alert("No items are in table to submit.  Add a device or select cancel.");
+                    }
                 },
                 failure: function (response) {
                     alert(response.d);
-                },
-                complete: function () {
-                    // Because our Ajax requests fail when we send to many, check if there are any HostName cells unchecked, then resend a single request.
-                    var table = document.getElementById("add_table");
-                    oTable = $('#add_table').dataTable();
-                    for (var i = 0, row; row = table.rows[i]; i++) {
-                        if (oTable.fnGetData(i, 1) === "<img src='img/ajax-loader.gif' style='vertical-align:middle;' height='15' width='15'><img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'></img>") {
-                            getDNS(oTable.fnGetData(i, 0));
-                            break;
-                        }
-                    }
                 }
+            });
+
+
+        },
+        Cancel: function () {
+            $(this).dialog("close");
+           
+        }
+    },
+    close: function () {
+        $('#loan_table').dataTable().fnClearTable();
+    }
+});
+
+// Create Jquery UI Dialog for return device
+$("#return_dialog").dialog({
+    autoOpen: false,
+    resizable: false,
+    width: 750,
+    height: 535,
+
+    modal: true,
+    buttons: {
+        "Return Selected": function () {
+
+
+
+
+            oTable = $('#return_table').DataTable();
+
+            $('#return_table tr.selected td:nth-child(3)').each(function () {
+
+                name = $(this).html();
+                order = $(this).prev('td').html();
+                $.ajax({
+                    type: "POST",
+                    url: "Default.aspx/ReturnDevice",
+                    data: '{name: "' + name + '", order: "' + order + '" }',
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function (response) {
+                        oTable.row(this).remove().draw(false);
+                    },
+                    failure: function (response) {
+                        alert(response.d);
+                    }
+                });
 
             });
+           
+            $(this).dialog("close");
+        },
+        Cancel: function () {
+            $(this).dialog("close");
         }
-        function OnSuccess(response, dName) {
-            // Add server response for hostname into datatable
-            var table = document.getElementById("add_table");
-            oTable = $('#add_table').dataTable();
-            for (var i = 0, row; row = table.rows[i]; i++) {
-                if (dName === oTable.fnGetData(i, 0)) {
-                    // Ignore adding DNS for those with error condition
-                    if (oTable.fnGetData(i, 1) === "<img src='img/ajax-loader.gif' style='vertical-align:middle;' height='15' width='15'><img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'></img>")
-                    {
-                        if (response.d === "") {
-                            oTable.fnUpdate("<img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'> " + dName + " cannot be found</img>", i, 1);
-                        } else {
-                            oTable.fnUpdate("<img src='img/ok.png' style='vertical-align:middle;' height='15' width='15'> " + response.d + "</img>", i, 1);
-                            oTable.fnUpdate(response.d, i, 3);
-                        }
+    },
+    close: function () {
+        $('#return_table').dataTable().fnClearTable();
+    }
+});
+    
+// Create Jquery UI Dialog for add device
+$("#dialog").dialog({
+    autoOpen: false,
+    resizable: false,
+width: 750,
+height: 535,
+    
+modal: true,
+buttons: {
+    "Submit": function () {
+
+        var table = document.getElementById("add_table");
+        oTable = $('#add_table').dataTable();
+        for (var i = 0, row; row = table.rows[i]; i++) {
+            var dName = oTable.fnGetData(i, 0);
+            var hName = oTable.fnGetData(i, 3);
+            var credId = oTable.fnGetData(i, 5);
+            // credID of -1 indicates default user, PDQ accepts this as a NULL value under ScanUserID
+            if (credId == -1)
+            {
+                credId = "NULL";
+            }
+            if (dName) {
+                $.ajax({
+                    type: "POST",
+                    url: "Default.aspx/AddComputer",
+                    data: '{name: "' + dName + '", hostname: "' + hName + '", credentialid: "' + credId + '"}',
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    failure: function (response) {
+                        alert(response.d);
+                    }
+
+                });
+            }
+        }
+
+
+            
+        $(this).dialog("close");
+    },
+    Cancel: function() {
+        $(this).dialog("close");
+    }
+},
+close: function () {
+    $('#add_table').dataTable().fnClearTable();
+}
+});
+    
+// Open Jquery UI DIalog for add device
+function add_dev()
+{
+    $("#dialog").dialog("open");
+}
+
+// Open Jquery UI DIalog for return device
+function return_dev() {
+    $("#return_dialog").dialog("open");
+    getMyData();
+}
+function getMyData() {
+    $.ajax({
+        type: "POST",
+        url: "Default.aspx/ReturnList",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: buildMyDatatable
+    });
+
+    function buildMyDatatable(result) {
+        // ASP.NET encapsulates JSON responses in a property "d", so remove it
+        if (result.hasOwnProperty("d")) { result = result.d; }
+        var data = jQuery.parseJSON(result);
+
+        // Check if datatable for return table exists, if so clear data and reload ajax source, otherwise initialize first instance
+        if ($.fn.dataTable.isDataTable('#return_table')) {
+
+            var oTable = $('#return_table').dataTable();
+
+            // Immediately 'nuke' the current rows (perhaps waiting for an Ajax callback...)
+            oTable.fnClearTable();
+            if (data != "") {
+                oTable.fnAddData(data);
+            }
+            
+        }
+        else {
+            var dt = $('#return_table').dataTable({
+                "sScrollX": "100%",
+                "sScrollY": "230px",
+                "paging": false,
+                "info": false,
+                "bFilter": false,
+                "table": "compact",
+                "language": {
+                    "emptyTable": " "
+                },
+                "aaData": data,
+                "aoColumns": [
+               //Assign the data to rows
+                { "mDataProp": "LoanedTo", "sTitle": "Loaned To:" },
+                { "mDataProp": "LoanOrder", "sTitle": "Loan Order #:" },
+                { "mDataProp": "Name", "sTitle": "Device:" },
+                { "mDataProp": "DueDate", "sTitle": "Due Date:" }
+
+
+                ]
+            });
+
+            oTable = $('#return_table').DataTable();
+            $('#filterbox').keyup(function () {
+                oTable.search($(this).val()).draw();
+            })
+
+            // Make rows selectable
+            $('#return_table tbody').on('click', 'tr', function () {
+                $(this).toggleClass('selected');
+            });
+        }
+    }
+}
+// Open Jquery UI Dialog for loan device
+function loan_dev()
+{
+    $.ajax({
+        type: "POST",
+        url: "Default.aspx/GetOnLoan",
+        data: '{}',
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            $("#tags").autocomplete({
+                source: response.d,
+                select: function (e, ui) {
+                    $(this).next().val(ui.item.id);
+                },
+                change: function (ev, ui) {
+                    if (!ui.item)
+                        $(this).val("");
+                }
+            });
+        },
+        failure: function (response) {
+            alert(response.d);
+        }
+    });
+
+    $("#loan_dialog").dialog("open");
+}
+// Insert item into Loan Table
+function loanClick(theName)
+{
+    var required = 0;
+    if ($('#loan_user').val() == '') {
+        required = 1;
+        $('#loan_user').css('border-color', 'red');
+    }
+    else {
+        $('#loan_user').css('border-color', '');
+    }
+    if ($('#datepicker').val() == '') {
+        required = 1;
+        $('#datepicker').css('border-color', 'red');
+    }
+    else {
+        $('#datepicker').css('border-color', '');
+    }
+    if ($('#tags').val() == '') {
+        required = 1;
+        $('#tags').css('border-color', 'red');
+    }
+    else {
+        $('#tags').css('border-color', '');
+    }
+    // All required fields populated, add values to table
+
+    var table = document.getElementById("loan_table");
+    oTable = $('#loan_table').dataTable();
+
+    for (var i = 0, row; row = table.rows[i]; i++) {
+        var data = oTable.fnGetData(i, 0)
+        if (data) {
+            if (typeof data === 'number') {
+                data = "" + data;
+            }
+            if (data.toUpperCase() === $('#tags').val() || data === "")
+                required = 1;
+        }
+    }
+    if (required != 1)
+    {
+        var table = $('#loan_table').DataTable();
+        table.row.add([
+            $('#tags').val(),
+            $('#loan_user').val(),
+            $('#datepicker').val()
+        ]).draw();
+    }
+
+}
+// Insert item into Add Table
+function addClick(theName) {
+    theName = "" + theName;
+    var chunk = theName.split(".");
+    var dName = chunk[0].toUpperCase() + "";
+    var t = document.getElementById("DropDownList1");
+    var selectedText = t.options[t.selectedIndex].text;
+    var selectedValue = t.options[t.selectedIndex].value;
+    var placeHolder = "<img src='img/ajax-loader.gif' style='vertical-align:middle;' height='15' width='15'><img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'></img>";
+    var x = 0;
+    // Verify this device is not already in the add_table
+    var table = document.getElementById("add_table");
+    oTable = $('#add_table').dataTable();
+
+    for (var i = 0, row; row = table.rows[i]; i++) {
+        var data = oTable.fnGetData(i, 0)
+        if (data) {
+            if (typeof data === 'number') {
+                data = "" + data;
+            }
+            if (data.toUpperCase() === dName || data === "")
+                x = 1;
+        }
+    }
+
+    // Verify this device is not in the database
+    // Get the index of the Name column
+    var i = $('#GridView1 tr th a').filter(
+    function () {
+        return $(this).text() == 'Name';
+    }).parent().prevAll().length;
+        
+    // Check if the name is duplicate
+    $("#GridView1 tr td:nth-child(" + (i + 1) + ")").each(function () {
+        // Need those extra spaces because the name column includes spaces to seperate name from icon
+
+        if ($(this).text().toUpperCase() == "  " + dName) {
+            placeHolder = "<img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'> Duplicate computer name: " + theName + "</img>";
+
+        }
+    });
+
+    // Name not found in add_table or database, add to table
+    if (x === 0) {
+        // Create the extra row
+        var table = $('#add_table').DataTable();
+        table.row.add([
+            dName,
+            placeHolder,
+            selectedText,
+            "",
+            selectedText,
+            selectedValue
+        ]).draw();
+        }
+};
+// Query server for a devices HostName
+function getDNS(dName) {
+    if (dName != "") {
+        addClick(dName);
+        $.ajax({
+            type: "POST",
+            url: "Default.aspx/GetHostName",
+            data: '{name: "' + dName + '" }',
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                OnSuccess(response, dName);
+            },
+            failure: function (response) {
+                alert(response.d);
+            },
+            complete: function () {
+                // Because our Ajax requests fail when we send too many, check if there are any HostName cells unchecked, then resend a single request.
+                var table = document.getElementById("add_table");
+                oTable = $('#add_table').dataTable();
+                for (var i = 0, row; row = table.rows[i]; i++) {
+                    if (oTable.fnGetData(i, 1) === "<img src='img/ajax-loader.gif' style='vertical-align:middle;' height='15' width='15'><img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'></img>") {
+                        getDNS(oTable.fnGetData(i, 0));
+                        break;
+                    }
+                }
+            }
+
+        });
+    }
+    function OnSuccess(response, dName) {
+        // Add server response for hostname into datatable
+        var table = document.getElementById("add_table");
+        oTable = $('#add_table').dataTable();
+        for (var i = 0, row; row = table.rows[i]; i++) {
+            if (dName === oTable.fnGetData(i, 0)) {
+                // Ignore adding DNS for those with error condition
+                if (oTable.fnGetData(i, 1) === "<img src='img/ajax-loader.gif' style='vertical-align:middle;' height='15' width='15'><img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'></img>")
+                {
+                    if (response.d === "") {
+                        oTable.fnUpdate("<img src='img/warning.png' style='vertical-align:middle;' height='15' width='15'> " + dName + " cannot be found</img>", i, 1);
+                    } else {
+                        oTable.fnUpdate("<img src='img/ok.png' style='vertical-align:middle;' height='15' width='15'> " + response.d + "</img>", i, 1);
+                        oTable.fnUpdate(response.d, i, 3);
                     }
                 }
             }
         }
     }
+}
 </script>
 
